@@ -2,12 +2,12 @@ import type { FC } from 'react';
 //imports FC (Function Component) from react
 
 export type Domain =
-  | 'workingMemory' //the ability to hold and manipulate information in your mind for a short period of time
-  | 'attention' //the ability to focus your attention on a specific task or stimulus
-  | 'language' //the ability to understand and use language
-  | 'numerical' //the ability to understand and use numbers
-  | 'visuospatial' //the ability to understand and use visual information and spatial relationships
-  | 'executive' //the ability to plan and organize your thoughts and actions
+  | 'workingMemory' 
+  | 'attention' 
+  | 'language' 
+  | 'numerical' 
+  | 'visuospatial' 
+  | 'executive' 
 //defines the domains of the games based off different cognitive abilities
 
 export const DOMAIN_LABELS: Record<Domain, string> = {

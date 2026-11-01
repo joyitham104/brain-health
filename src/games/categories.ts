@@ -1,4 +1,5 @@
 export type Category = { name: string; words: string[]; band: 'easy' | 'mid' | 'letter' };
+//defines the categories of the word fluency game
 
 export const CATEGORIES: Category[] = [
   {
