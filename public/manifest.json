@@ -1,0 +1,16 @@
+{
+  "name": "Brain Health",
+  "short_name": "Brain Health",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4E8C8",
+  "theme_color": "#F4E8C8",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
