@@ -11,7 +11,7 @@ const ORDER: Domain[] = [
 
 export default function DomainBars({ scores }: { scores: Partial<Record<Domain, number | null>> }) {
   return (
-    <div>
+    <div aria-label="Skill scores">
       {ORDER.map((d) => {
         const v = scores[d];
         if (v == null) return null;
@@ -21,7 +21,14 @@ export default function DomainBars({ scores }: { scores: Partial<Record<Domain, 
               <span>{DOMAIN_LABELS[d]}</span>
               <span>{Math.round(v)}</span>
             </div>
-            <div className="bar">
+            <div
+              className="bar"
+              role="progressbar"
+              aria-label={DOMAIN_LABELS[d]}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(v)}
+            >
               <span style={{ width: `${Math.max(0, Math.min(100, v))}%` }} />
             </div>
           </div>

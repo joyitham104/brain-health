@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BigButton from '../components/BigButton';
+import { AppMark, PageGraphic } from '../components/Visuals';
 import { isStaff, setPlayerCode } from '../lib/player';
 import { say } from '../lib/speech';
 
@@ -28,8 +29,15 @@ export default function Enter() {
 
   return (
     <main className="screen">
+      <header className="topbar">
+        <div className="brand">
+          <AppMark />
+          <p className="kicker">Cognitive measurement</p>
+        </div>
+      </header>
       <h1>Brain Health</h1>
-      <p>Enter your 4-digit player code.</p>
+      <p className="lead">Enter your 4-digit player code.</p>
+      <PageGraphic kind="welcome" />
       <div className="code">{code.padEnd(4, '·')}</div>
       <div className="grid-3">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', 'Go'].map((k) => (

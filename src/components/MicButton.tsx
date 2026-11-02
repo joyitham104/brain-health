@@ -1,3 +1,5 @@
+import { MicIcon } from './Visuals';
+
 type Props = {
   onClick: () => void;
   listening?: boolean;
@@ -18,6 +20,7 @@ export default function MicButton({
       disabled={disabled}
       type="button"
     >
+      <MicIcon />
       {listening ? 'Listening…' : label}
     </button>
   );

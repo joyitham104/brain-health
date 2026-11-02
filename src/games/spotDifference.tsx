@@ -37,7 +37,7 @@ function House({ diffs, found, onHit }: { diffs: Diff[]; found: Set<string>; onH
           cx={d.x}
           cy={d.y}
           r={found.has(d.id) ? 6 : 5}
-          fill={found.has(d.id) ? '#1f4e3d' : '#ca8a04'}
+          fill={found.has(d.id) ? '#0a5bd3' : '#e23c2c'}
           opacity={found.has(d.id) ? 1 : 0.85}
         />
       ))}

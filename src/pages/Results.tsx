@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import BigButton from '../components/BigButton';
+import { AppMark, PageGraphic } from '../components/Visuals';
 import { getSessions } from '../lib/db';
 import { getPlayerCode } from '../lib/player';
 import { say } from '../lib/speech';
 
-type State = { gameName: string; itemsAttempted: number; accuracy: number };
+type State = { gameName: string; itemsAttempted: number };
 
 export default function Results() {
   const nav = useNavigate();
@@ -25,12 +26,21 @@ export default function Results() {
 
   return (
     <main className="screen">
+      <header className="topbar">
+        <div className="brand">
+          <AppMark />
+          <p className="kicker">Brain Health</p>
+        </div>
+        {code && <p className="player-id">Player {code}</p>}
+      </header>
       <h1>Well done</h1>
+      <PageGraphic kind="success" />
       <p className="prompt">{line}</p>
-      <div className="stack">
+      <div className="stack footer-actions">
         <BigButton primary onClick={() => nav('/menu')}>
           Play another
         </BigButton>
+        <BigButton onClick={() => nav('/stats')}>See my stats</BigButton>
         <BigButton onClick={() => say(line)}>Hear that again</BigButton>
       </div>
     </main>

@@ -1,13 +1,82 @@
-export function say(text: string) {
+const DEFAULT_VOICE = '21m00Tcm4TlvDq8ikWAM';
+const cache = new Map<string, Blob>();
+
+let player: HTMLAudioElement | null = null;
+let objectUrl: string | null = null;
+let abort: AbortController | null = null;
+
+export function cancelSpeech() {
+  abort?.abort();
+  abort = null;
+  window.speechSynthesis.cancel();
+  if (player) {
+    player.pause();
+    player.removeAttribute('src');
+    player = null;
+  }
+  if (objectUrl) {
+    URL.revokeObjectURL(objectUrl);
+    objectUrl = null;
+  }
+}
+
+function browserSay(text: string) {
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 0.9;
   window.speechSynthesis.speak(u);
 }
 
+async function elevenSay(text: string, key: string, signal: AbortSignal) {
+  let blob = cache.get(text);
+  if (!blob) {
+    const voice = import.meta.env.VITE_ELEVENLABS_VOICE_ID || DEFAULT_VOICE;
+    const path = `/v1/text-to-speech/${voice}`;
+    const url = import.meta.env.DEV
+      ? `/elevenlabs${path}`
+      : `https://api.elevenlabs.io${path}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      signal,
+      headers: {
+        'xi-api-key': key,
+        Accept: 'audio/mpeg',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_turbo_v2_5',
+        voice_settings: { stability: 0.65, similarity_boost: 0.75 },
+      }),
+    });
+    if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
+    blob = await res.blob();
+    if (cache.size > 50) cache.clear();
+    cache.set(text, blob);
+  }
+  if (signal.aborted) return;
+  objectUrl = URL.createObjectURL(blob);
+  player = new Audio(objectUrl);
+  await player.play();
+}
+
+export function say(text: string) {
+  const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
+  if (!key) {
+    cancelSpeech();
+    browserSay(text);
+    return;
+  }
+  cancelSpeech();
+  abort = new AbortController();
+  const { signal } = abort;
+  void elevenSay(text, key, signal).catch(() => {
+    if (!signal.aborted) browserSay(text);
+  });
+}
+
 function Recognition() {
-  const C =
-    window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
+  const C = window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
   return C ? new C() : null;
 }
 
@@ -23,15 +92,14 @@ export function listen(ms = 6000): Promise<string> {
     rec.maxAlternatives = 3;
     rec.continuous = false;
     let done = false;
-    const finish = (text: string) => {
+    const finish = (spoken: string) => {
       if (done) return;
       done = true;
       rec.stop();
-      resolve(text.trim().toLowerCase());
+      resolve(spoken.trim().toLowerCase());
     };
     rec.onresult = (e: { results: SpeechRecognitionResultList }) => {
-      const said = e.results[0]?.[0]?.transcript ?? '';
-      finish(said);
+      finish(e.results[0]?.[0]?.transcript ?? '');
     };
     rec.onerror = () => {
       if (!done) {

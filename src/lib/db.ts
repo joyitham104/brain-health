@@ -30,6 +30,10 @@ export function playerCodes(): string[] {
   return [...codes].sort();
 }
 
+export function getProgressList(playerCode: string): Progress[] {
+  return read<Progress[]>(PROGRESS_KEY, []).filter((p) => p.playerCode === playerCode);
+}
+
 export function getProgress(playerCode: string, gameId: string): Progress {
   const all = read<Progress[]>(PROGRESS_KEY, []);
   return (

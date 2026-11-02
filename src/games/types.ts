@@ -2,13 +2,12 @@ import type { FC } from 'react';
 //imports FC (Function Component) from react
 
 export type Domain =
-  | 'workingMemory' 
-  | 'attention' 
-  | 'language' 
-  | 'numerical' 
-  | 'visuospatial' 
-  | 'executive' 
-//defines the domains of the games based off different cognitive abilities
+  | 'workingMemory'
+  | 'attention'
+  | 'language'
+  | 'numerical'
+  | 'visuospatial'
+  | 'executive';
 
 export const DOMAIN_LABELS: Record<Domain, string> = {
   workingMemory: 'Working memory',
@@ -18,46 +17,51 @@ export const DOMAIN_LABELS: Record<Domain, string> = {
   visuospatial: 'Visuospatial',
   executive: 'Executive function',
 };
-//defines the labels for the domains of the games based off different cognitive abilities
+//defines the display names for the domains of the games (more professional) 
 
 export type SessionResult = {
-  accuracy: number; //the accuracy of the games based off different cognitive abilities
-  medianResponseMs: number; //the median response time of the games based off different cognitive abilities
-  itemsAttempted: number; //the number of items attempted by the player based off different cognitive abilities
-  notes?: string;//the notes of the player based off different cognitive abilities (?=optional)
+  accuracy: number; 
+  medianResponseMs: number; //(time taken to respond in milliseconds)
+  itemsAttempted: number; //total attempted items
+  notes?: string;//notes of the player (?=optional)
 }; 
-//defines the session result of the games based off different cognitive abilities
+//defines the session result during the game (standardized format, easier to analyze and compare)
 
 export type Game = {
   id: string;
   name: string;
-  domain: Domain;
-  modeledOn: string;
-  description: string;
+  domain: Domain; //cognitive ability measured
+  modeledOn: string; //clinical test the game is modeled after
+  description: string; 
   ready: boolean;
+  maxLevel?: number;
   Component: FC<{
     level: number;
-    onAnswer: (correct: boolean, responseMs: number) => void;
-    onFinish: (result: SessionResult) => void;
+    onAnswer: (correct: boolean, responseMs: number) => void; //records single question response time and correctness
+    onFinish: (result: SessionResult) => void; //sends results to the parent component
+    //properties of the component
   }>;
+  //responsible for running andrendering the game, level, onAnswer, onFinish are the props passed to the component
 };
-//defines the game of the games based off different cognitive abilities
+//defines the layout of the games 
 
 export type Session = {
-  id: string;
+  id: string; //for session identification
   playerCode: string;
-  gameId: string;
+  gameId: string; //which game was played
   domain: Domain;
   level: number;
   accuracy: number;
   medianResponseMs: number;
   itemsAttempted: number;
   score: number;
-  playedAt: string;
+  playedAt: string; //date and time of the session
   notes?: string;
 };
+//completed game stored in the database (after)
 
 export type Streak = { right: number; wrong: number };
+//streak used to adjust the difficulty of the game (adaptive)
 
 export type Progress = {
   playerCode: string;
@@ -65,3 +69,4 @@ export type Progress = {
   level: number;
   streak: Streak;
 };
+//tracks the progress of the player in the game

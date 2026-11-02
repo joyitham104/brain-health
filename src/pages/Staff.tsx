@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DomainBars from '../components/DomainBars';
 import LineChart from '../components/LineChart';
 import BigButton from '../components/BigButton';
+import { AppMark, PageGraphic } from '../components/Visuals';
 import { DOMAIN_LABELS, type Domain } from '../games/types';
 import { downloadCSV, toCSV } from '../lib/csv';
 import { getSessions, playerCodes } from '../lib/db';
@@ -23,8 +24,15 @@ export default function Staff() {
 
   return (
     <main className="screen">
+      <header className="topbar">
+        <div className="brand">
+          <AppMark />
+          <p className="kicker">Staff</p>
+        </div>
+      </header>
       <h1>Staff view</h1>
-      <p className="small">This measures participation and performance over time. It does not diagnose.</p>
+      <p className="lead">This measures participation and performance over time. It does not diagnose.</p>
+      <PageGraphic kind="staff" />
       {codes.length === 0 && <p>No sessions yet. Play as a player first.</p>}
       {codes.length > 0 && (
         <>

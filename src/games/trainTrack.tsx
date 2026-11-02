@@ -126,8 +126,8 @@ function TrainTrackGame({
               className="big-btn"
               style={{
                 minHeight: 64,
-                background: isBlock ? '#7a1f1f' : onPath ? '#1f4e3d' : '#fff8e7',
-                color: isBlock || onPath ? '#f4e8c8' : '#1b1b1b',
+                background: isBlock ? '#9f1239' : onPath ? '#0a5bd3' : '#ffffff',
+                color: isBlock || onPath ? '#ffffff' : '#0b1f3a',
               }}
               onClick={() => moveTo(cell)}
             >

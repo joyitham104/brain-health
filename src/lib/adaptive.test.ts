@@ -23,6 +23,10 @@ describe('nextLevel', () => {
     expect(nextLevel(10, { right: 2, wrong: 0 }, true).level).toBe(10);
   });
 
+  it('does not go above a game maxLevel', () => {
+    expect(nextLevel(8, { right: 2, wrong: 0 }, true, 8).level).toBe(8);
+  });
+
   it('a miss resets the right streak', () => {
     expect(nextLevel(4, { right: 2, wrong: 0 }, false)).toEqual({
       level: 4,

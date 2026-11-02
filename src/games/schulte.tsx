@@ -4,11 +4,13 @@ import { median } from '../lib/scoring';
 import { listen, parseNumber, say } from '../lib/speech';
 import type { Game } from './types';
 
+const MAX_LEVEL = 8;
+
 function gridSize(level: number) {
-  if (level <= 3) return 3;
-  if (level <= 6) return 4;
-  if (level <= 8) return 5;
-  return 6;
+  const lv = Math.min(level, MAX_LEVEL);
+  if (lv <= 3) return 3;
+  if (lv <= 6) return 4;
+  return 5;
 }
 
 function shuffle<T>(arr: T[]) {
@@ -33,29 +35,32 @@ function SchulteGame({
   const hits = useRef(0);
   const times = useRef<number[]>([]);
   const start = useRef(Date.now());
+  const tableStart = useRef(Date.now());
+  const tableMiss = useRef(false);
   const levelRef = useRef(level);
-  levelRef.current = level;
+  levelRef.current = Math.min(level, MAX_LEVEL);
 
   function resetBoard(lv: number) {
     const s = gridSize(lv);
     next.current = 1;
+    tableMiss.current = false;
     setTarget(1);
     setNums(shuffle(Array.from({ length: s * s }, (_, i) => i + 1)));
     start.current = Date.now();
-    say(`Find number ${1}.`);
+    tableStart.current = Date.now();
+    say('Find number 1.');
   }
 
   useEffect(() => {
     say('Tap the numbers in order, starting at one. You can also say the number.');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function choose(n: number) {
     const ms = Date.now() - start.current;
     taps.current += 1;
     const ok = n === next.current;
-    onAnswer(ok, ms);
     if (!ok) {
+      tableMiss.current = true;
       say(`Look for ${next.current}.`);
       return;
     }
@@ -67,6 +72,7 @@ function SchulteGame({
     const s = gridSize(levelRef.current);
     if (next.current > s * s) {
       table.current += 1;
+      onAnswer(!tableMiss.current, Date.now() - tableStart.current);
       say('Table complete.');
       if (table.current >= 3) {
         onFinish({
@@ -84,19 +90,26 @@ function SchulteGame({
 
   async function voice() {
     const said = await listen();
-    const n = parseNumber(said);
-    if (n != null) choose(n);
+    const parsed = parseNumber(said);
+    if (parsed != null) choose(parsed);
   }
 
-  const cls = size <= 3 ? 'grid-3' : size === 4 ? 'grid-4' : size === 5 ? 'grid-5' : 'grid-6';
+  const cls = size <= 3 ? 'grid-3' : size === 4 ? 'grid-4' : 'grid-5';
+  const noisy = levelRef.current >= 7;
 
   return (
     <div className="stack">
       <p className="prompt">Find {target}</p>
       <div className={cls}>
         {nums.map((n) => (
-          <button key={n} className="big-btn pad" onClick={() => choose(n)} style={{ minHeight: 64, fontSize: 22 }}>
+          <button
+            key={n}
+            className="big-btn pad schulte-cell"
+            onClick={() => choose(n)}
+            style={{ minHeight: noisy ? 56 : 64, fontSize: noisy ? 20 : 22 }}
+          >
             {n}
+            {noisy && <span className="decoy">{(n % 9) + 1}</span>}
           </button>
         ))}
       </div>
@@ -112,6 +125,7 @@ const schulte: Game = {
   modeledOn: 'Visual search number tables',
   description: 'Find numbers in order on a grid. Say or tap each one.',
   ready: true,
+  maxLevel: MAX_LEVEL,
   Component: SchulteGame,
 };
 

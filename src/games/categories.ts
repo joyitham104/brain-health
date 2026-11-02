@@ -1,5 +1,5 @@
 export type Category = { name: string; words: string[]; band: 'easy' | 'mid' | 'letter' };
-//defines the categories of the word fluency game
+//defines the categories of the word fluency game (difficulty and accepted answers)
 
 export const CATEGORIES: Category[] = [
   {
@@ -35,15 +35,18 @@ export const CATEGORIES: Category[] = [
   { name: 'words that start with F', band: 'letter', words: [] },
   { name: 'words that start with S', band: 'letter', words: [] },
   { name: 'words that start with M', band: 'letter', words: [] },
+  //no predefined list (checks first letter of the word)
 ];
 
 export function pickCategories(level: number): Category[] {
+  //receives the level of the player and returns the array of two categories
   const band = level <= 3 ? 'easy' : level <= 7 ? 'mid' : 'letter';
   const pool = CATEGORIES.filter((c) => c.band === band);
   const a = pool[Math.floor(Math.random() * pool.length)];
   const b = pool.filter((c) => c.name !== a.name)[Math.floor(Math.random() * (pool.length - 1))] ?? a;
   return [a, b];
 }
+//picks two random categories based on the level of the player
 
 export function targetFor(level: number) {
   return 8 + Math.round(((level - 1) * 8) / 9);
