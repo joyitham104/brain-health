@@ -113,7 +113,7 @@ function SchulteGame({
           </button>
         ))}
       </div>
-      <MicButton onClick={() => void voice().catch(() => undefined)} />
+      <MicButton onClick={voice} />
     </div>
   );
 }

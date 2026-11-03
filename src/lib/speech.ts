@@ -75,43 +75,180 @@ export function say(text: string) {
   });
 }
 
-function Recognition() {
+export async function createSpeechRecognition() {
   const C = window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
-  return C ? new C() : null;
+  if (!C) return null;
+  const rec = new C();
+
+  // Newer Chrome versions can recognize speech on-device. Prefer that mode
+  // because the default Web Speech service can fail with a network error.
+  if ('processLocally' in rec && C.available) {
+    try {
+      const options = { langs: ['en-US'], processLocally: true };
+      let status = await C.available(options);
+      if ((status === 'downloadable' || status === 'downloading') && C.install) {
+        const installed = await C.install({ langs: options.langs });
+        if (installed) status = 'available';
+      }
+      if (status === 'available') rec.processLocally = true;
+    } catch {
+      // Fall back to Chrome's online recognition service.
+    }
+  }
+
+  return rec;
 }
 
-export function listen(ms = 6000): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const rec = Recognition();
-    if (!rec) {
-      reject(new Error('Speech recognition is not available in this browser.'));
-      return;
+async function recordAudio(ms: number) {
+  if (!window.isSecureContext) {
+    throw new Error(
+      'Chrome blocks microphones on insecure addresses. Open this app at http://localhost:5173 or use HTTPS.',
+    );
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error('Chrome cannot access media devices. Check site microphone permissions and reload the page.');
+  }
+  if (typeof MediaRecorder === 'undefined') {
+    throw new Error('This browser cannot record audio. Update Chrome or Microsoft Edge and try again.');
+  }
+
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true },
+    });
+  } catch (reason) {
+    const name = reason instanceof DOMException ? reason.name : '';
+    if (name === 'NotAllowedError' || name === 'SecurityError') {
+      throw new Error('Microphone access was blocked. Allow microphone access in Chrome, then try again.');
     }
+    throw new Error('No working microphone was found. Check your microphone and Windows sound settings.');
+  }
+
+  const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((type) =>
+    MediaRecorder.isTypeSupported(type),
+  );
+  const chunks: Blob[] = [];
+  try {
+    return await new Promise<Blob>((resolve, reject) => {
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const timer = window.setTimeout(() => {
+        if (recorder.state !== 'inactive') recorder.stop();
+      }, ms);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size) chunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        window.clearTimeout(timer);
+        reject(new Error('The microphone stopped unexpectedly. Please try again.'));
+      };
+      recorder.onstop = () => {
+        window.clearTimeout(timer);
+        resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || 'audio/webm' }));
+      };
+      recorder.start();
+    });
+  } finally {
+    stream.getTracks().forEach((track) => track.stop());
+  }
+}
+
+async function elevenTranscribe(ms: number, key: string) {
+  const audio = await recordAudio(ms);
+  if (!audio.size) throw recognitionError('no-speech');
+
+  const extension = audio.type.includes('mp4') ? 'm4a' : 'webm';
+  const form = new FormData();
+  form.append('file', audio, `speech.${extension}`);
+  form.append('model_id', 'scribe_v1');
+  form.append('language_code', 'eng');
+  const path = '/v1/speech-to-text';
+  const url = import.meta.env.DEV ? `/elevenlabs${path}` : `https://api.elevenlabs.io${path}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'xi-api-key': key },
+    body: form,
+  });
+  if (!response.ok) {
+    throw new Error(`Speech transcription failed (${response.status}). Please try again.`);
+  }
+  const result = (await response.json()) as { text?: string };
+  const transcript = result.text?.trim().toLowerCase() ?? '';
+  if (!transcript) throw recognitionError('no-speech');
+  return transcript;
+}
+
+function recognitionError(code?: string) {
+  switch (code) {
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return new Error('Microphone access was blocked. Allow microphone access in your browser, then try again.');
+    case 'audio-capture':
+      return new Error('No working microphone was found. Check your microphone and Windows sound settings.');
+    case 'network':
+      return new Error('Speech recognition needs an internet connection. Check your connection and try again.');
+    case 'no-speech':
+      return new Error('I did not hear anything. Tap Speak and try again.');
+    case 'aborted':
+      return new Error('Listening was interrupted. Please try again.');
+    default:
+      return new Error('I could not understand that. Please try again.');
+  }
+}
+
+export async function listen(ms = 6000): Promise<string> {
+  // Do not let spoken instructions feed back into recognition.
+  cancelSpeech();
+  const rec = await createSpeechRecognition();
+  if (!rec) {
+    const key = import.meta.env.VITE_ELEVENLABS_API_KEY;
+    if (key) return elevenTranscribe(ms, key);
+    throw new Error('Speech recognition is unavailable and speech transcription is not configured.');
+  }
+  return new Promise((resolve, reject) => {
     rec.lang = 'en-US';
     rec.interimResults = false;
     rec.maxAlternatives = 3;
     rec.continuous = false;
     let done = false;
-    const finish = (spoken: string) => {
+    let timer = 0;
+    const finish = (spoken: string, stop = true) => {
       if (done) return;
       done = true;
-      rec.stop();
-      resolve(spoken.trim().toLowerCase());
+      window.clearTimeout(timer);
+      if (stop) {
+        try {
+          rec.stop();
+        } catch {
+          // Recognition may already have ended.
+        }
+      }
+      const transcript = spoken.trim().toLowerCase();
+      if (transcript) resolve(transcript);
+      else reject(recognitionError('no-speech'));
     };
     rec.onresult = (e: { results: SpeechRecognitionResultList }) => {
       finish(e.results[0]?.[0]?.transcript ?? '');
     };
-    rec.onerror = () => {
+    rec.onerror = (event: Event) => {
       if (!done) {
         done = true;
-        reject(new Error('Could not hear that.'));
+        window.clearTimeout(timer);
+        reject(recognitionError((event as Event & { error?: string }).error));
       }
     };
     rec.onend = () => {
-      if (!done) finish('');
+      if (!done) finish('', false);
     };
-    rec.start();
-    window.setTimeout(() => rec.stop(), ms);
+    try {
+      rec.start();
+      timer = window.setTimeout(() => {
+        if (!done) finish('');
+      }, ms);
+    } catch {
+      done = true;
+      reject(new Error('The microphone could not start. Check browser microphone permission and try again.'));
+    }
   });
 }
 

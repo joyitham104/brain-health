@@ -136,7 +136,7 @@ function TrainTrackGame({
           );
         })}
       </div>
-      <MicButton onClick={() => void voice().catch(() => undefined)} />
+      <MicButton onClick={voice} />
       <BigButton onClick={() => layout(levelRef.current)}>Undo / reset track</BigButton>
     </div>
   );

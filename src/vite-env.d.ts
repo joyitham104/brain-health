@@ -10,6 +10,7 @@ interface SpeechRec extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   maxAlternatives: number;
+  processLocally?: boolean;
   start(): void;
   stop(): void;
   abort(): void;
@@ -18,7 +19,13 @@ interface SpeechRec extends EventTarget {
   onend: (() => void) | null;
 }
 
+interface SpeechRecConstructor {
+  new (): SpeechRec;
+  available?: (options: { langs: string[]; processLocally: boolean }) => Promise<string>;
+  install?: (options: { langs: string[] }) => Promise<boolean>;
+}
+
 interface Window {
-  webkitSpeechRecognition?: new () => SpeechRec;
-  SpeechRecognition?: new () => SpeechRec;
+  webkitSpeechRecognition?: SpeechRecConstructor;
+  SpeechRecognition?: SpeechRecConstructor;
 }

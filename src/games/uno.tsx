@@ -155,7 +155,7 @@ function UnoGame({
           </BigButton>
         ))}
       </div>
-      <MicButton onClick={() => void voice().catch(() => undefined)} />
+      <MicButton onClick={voice} />
       <BigButton onClick={draw}>Draw a card</BigButton>
     </div>
   );

@@ -123,7 +123,7 @@ function MathRiddlesGame({
           </BigButton>
         ))}
       </div>
-      <MicButton onClick={() => void voice().catch(() => undefined)} />
+      <MicButton onClick={voice} />
     </div>
   );
 }

@@ -118,7 +118,7 @@ function SpotGame({
         </svg>
         <House diffs={diffs.current} found={found} onHit={mark} />
       </div>
-      <MicButton onClick={() => void voice().catch(() => undefined)} />
+      <MicButton onClick={voice} />
     </div>
   );
 }

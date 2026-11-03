@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import MicButton from '../components/MicButton';
 import { median } from '../lib/scoring';
-import { say } from '../lib/speech';
+import { cancelSpeech, createSpeechRecognition, listen, say } from '../lib/speech';
 import { matchWord, pickCategories, targetFor, type Category } from './categories';
 import type { Game } from './types';
 
@@ -60,37 +60,66 @@ function WordFluencyGame({
     }
   }
 
-  function listenRound() {
-    const C = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!C) return;
-    const rec = new C();
-    rec.continuous = true;
-    rec.interimResults = false;
-    rec.lang = 'en-US';
+  async function listenRound() {
+    cancelSpeech();
+    const rec = await createSpeechRecognition();
     setListening(true);
-    rec.onresult = (e: { results: SpeechRecognitionResultList }) => {
-      const said = e.results[e.results.length - 1]?.[0]?.transcript ?? '';
-      ingest(said);
-    };
-    rec.start();
-    window.setTimeout(() => {
-      rec.stop();
-      setListening(false);
-      const target = targetFor(level);
-      const acc = Math.min(1, unique.current.size / target);
-      onAnswer(acc >= 0.5, 0);
-      if (idx === 0) {
-        setIdx(1);
-        startCategory(1);
+    try {
+      if (!rec) {
+        ingest(await listen(45000));
       } else {
-        onFinish({
-          accuracy: Math.min(1, knownCount.current / (targetFor(level) * 2)),
-          medianResponseMs: median(gaps.current),
-          itemsAttempted: unique.current.size,
-          notes: unknown.current.length ? `unknown: ${unknown.current.join(', ')}` : undefined,
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.lang = 'en-US';
+        await new Promise<void>((resolve, reject) => {
+          let done = false;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            resolve();
+          };
+          rec.onresult = (e: { results: SpeechRecognitionResultList }) => {
+            const said = e.results[e.results.length - 1]?.[0]?.transcript ?? '';
+            ingest(said);
+          };
+          rec.onerror = (event: Event) => {
+            if (done) return;
+            done = true;
+            const code = (event as Event & { error?: string }).error;
+            reject(
+              new Error(
+                code === 'not-allowed' || code === 'service-not-allowed'
+                  ? 'Microphone access was blocked. Allow microphone access in your browser, then try again.'
+                  : code === 'audio-capture'
+                    ? 'No working microphone was found. Check your microphone and Windows sound settings.'
+                    : 'Listening stopped unexpectedly. Please try again.',
+              ),
+            );
+          };
+          rec.onend = finish;
+          rec.start();
+          window.setTimeout(() => {
+            if (!done) rec.stop();
+          }, 45000);
         });
       }
-    }, 45000);
+    } finally {
+      setListening(false);
+    }
+    const target = targetFor(level);
+    const acc = Math.min(1, unique.current.size / target);
+    onAnswer(acc >= 0.5, 0);
+    if (idx === 0) {
+      setIdx(1);
+      startCategory(1);
+    } else {
+      onFinish({
+        accuracy: Math.min(1, knownCount.current / (targetFor(level) * 2)),
+        medianResponseMs: median(gaps.current),
+        itemsAttempted: unique.current.size,
+        notes: unknown.current.length ? `unknown: ${unknown.current.join(', ')}` : undefined,
+      });
+    }
   }
 
   return (
